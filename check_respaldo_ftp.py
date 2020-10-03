@@ -5,6 +5,79 @@ from zipfile import ZipFile, ZIP_DEFLATED
 from ftplib import FTP
 import shutil,time,os,pwd
 import sys
+import argparse
+
+
+parser = argparse.ArgumentParser(description="Check Respaldo FTP Nagios")
+
+parser.add_argument(
+    "-s",
+    "--server",
+    required=True,
+    help="ip del servidor FTP a conectar"
+
+)
+
+parser.add_argument(
+    "-u",
+    "--usuario",
+    required=True,
+    help="nombre de usuario"
+
+)
+
+parser.add_argument(
+    "-pass",
+    "--password",
+    required=True,
+    help="password de usuario"
+
+)
+
+parser.add_argument(
+    "-r",
+    "--ruta",
+    required=True,
+    help="ruta de descarga del FTP, debe terminar con /"
+
+)
+
+parser.add_argument(
+    "-t",
+    "--temporal",
+    required=True,
+    help="ruta temporal de descarga"
+
+)
+
+parser.add_argument(
+    "-c",
+    "--copia",
+    required=True,
+    help="ruta copia de descarga en archivo zip"
+
+)
+
+parser.add_argument(
+    "-port",
+    "--puerto",
+    nargs="?",
+    default=21,
+    type=int,
+    help="ruta copia de descarga en archivo zip"
+
+)
+
+args = parser.parse_args()
+
+""" print(f"la ip del server es: {args.server}")
+print(f"El nombre de usuario es: {args.usuario}")
+print(f"la password es: {args.password}")
+print(f"la ruta de descarga del FTP es: {args.ruta}")
+print(f"la ruta temporal de recibo es: {args.temporal}")
+print(f"el puerto de conexion  es: {args.puerto}")
+exit() """
+
 
 #variables Nagios
 UNKNOWN = -1
@@ -13,14 +86,22 @@ WARNING = 1
 CRITICAL = 2
 
 #Variables Globales de configuracion
-HOST = '192.168.0.7'
-PUERTO = 21
-USUARIO = 'cristian'
-CLAVE = 'cristian'
+HOST = f'{args.server}'
+PUERTO = args.puerto
+USUARIO = f'{args.usuario}'
+CLAVE = f'{args.password}'
 #ruta = "/"
-ruta = "/etc/apache2/"
-destino = "/home/cristian/backup/temporal" 
+ruta = f"{args.ruta}"
+destino = f"{args.temporal}" 
 ftp = FTP()
+
+""" print(f"la ip del server es: {HOST}")
+print(f"El nombre de usuario es: {USUARIO}")
+print(f"la password es: {CLAVE}")
+print(f"la ruta de descarga del FTP es: {type(ruta)}")
+print(f"la ruta temporal de recibo es: {destino}")
+print(f"el puerto de conexion  es: {PUERTO}")
+exit() """
 
 #Variables globales para logs
 listaErrores = []
