@@ -6,6 +6,22 @@ from ftplib import FTP
 import shutil,time,os,pwd
 import sys
 import argparse
+from datetime import datetime, date, time, timedelta
+
+#python3 check_respaldo_ftp.py -s 192.168.0.7 -u cristian -pass cristian -r /etc/apache2/ -t /home/cristian/backup/temporal -c /home/cristian/backup/
+
+"""
+Hola a Todos,
+Por favor si me pueden orientar como hacer lo siguiente.
+Resulta que necesito que se ejecute un script cada cierto tiempo que lo defina el usuario, sea cada 7 dias, 1 mes, etc. Algunos me diran que use un cronjob, pero no me sirve en este caso. Necesito que el usuario lo ingrese por ejemplo por argparse, el ciclo de los dias que se ejecutara el script
+El punto que si elije 7 dias, puedo sumar a la variable por ejemplo dia_ciclo = fecha+timedelta(days=7) o semana_siguiente = fecha_inicio+timedelta(weeks=1), pero como lo hago para la semana siguiente, ya que el script sera llamado de forma constante (cada 30min por ejemplo).
+Pense algo asi, pero solo me servira para un ciclo. Nose como hacerlo para que sea constante.
+fecha_inicio = date(2020, 10, 2 )
+semana_siguiente = fecha_inicio+timedelta(weeks=1)
+while fecha_inicio < semana_siguiente:
+    fecha_inicio = fecha_inicio+timedelta(days=1)
+
+"""
 
 
 parser = argparse.ArgumentParser(description="Check Respaldo FTP Nagios")
@@ -59,6 +75,22 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "-d",
+    "--dia",
+    type=int,
+    help="ciclo de dias que se realizara el respaldo"
+
+)
+
+parser.add_argument(
+    "-w",
+    "--semana",
+    type=int,
+    help="ciclos por semana que se realizara el respaldo"
+
+)
+
+parser.add_argument(
     "-port",
     "--puerto",
     nargs="?",
@@ -68,6 +100,8 @@ parser.add_argument(
 
 )
 
+
+
 args = parser.parse_args()
 
 """ print(f"la ip del server es: {args.server}")
@@ -76,7 +110,10 @@ print(f"la password es: {args.password}")
 print(f"la ruta de descarga del FTP es: {args.ruta}")
 print(f"la ruta temporal de recibo es: {args.temporal}")
 print(f"el puerto de conexion  es: {args.puerto}")
+print(f"la cantidad de dia es: {args.dia}")
+print(f"la cantidad de semana es: {args.semana}")
 exit() """
+
 
 
 #variables Nagios
@@ -268,17 +305,92 @@ def comprimirYBorrar(ruta):
     #print("Ruta comprimida en "+COPIAZIP)
     shutil.rmtree(ruta, ignore_errors=True)
     #print("Eliminados los archivos descargados que no estaban comprimidos de la ruta:\n\t"+ruta)
-       
-#Main 
-#print('Comienza la ejecucion del backup de sitio web '+HOST)
-conectar()
-descargaRecursiva(ruta)
-mostrarLog()
-comprimirYBorrar(destino)
 
-#Desconectamos con el servidor de forma protocolaria
-ftp.quit()
-print('OK - Conexion cerrada y archivos respaldados correctamente, ruta: '+ COPIAZIP+'con fecha: '+str(time.strftime("%Y%m%d-%H%M%S")))
+def init(path_file, fecha, formato_fecha):
+    """ Guarda la fecha determinada por el usuario """
+    with open(path_file, 'w') as ruta_fecha:
+        ruta_fecha.write(fecha.strftime(formato_fecha))
+
+def check_if_datefile_exists(path_file):
+    return os.path.exists(path_file)
+
+def get_content_date_from_file(path_file):
+    with open(path_file, "r") as ruta_fecha:
+        return ruta_fecha.read()
+
+
+       
+#Main
+
+# Ruta del archivo
+tmp_path = os.getcwd()+"/tmp" # Preferir full_path para evitar problemas de referencia de directorio
+path_file = f"{tmp_path}/fecha.txt" # nombre del archivo con su direcotrio base
+
+# Fecha actual
+today = date.today()
+formato_fecha = "%d/%m/%Y %H:%M:%S"
+
+try:
+    if not check_if_datefile_exists(path_file):
+        # Se inicia el archivo con la fecha
+        os.makedirs(tmp_path) #crea la carpeta
+        init(path_file, today, formato_fecha)
+except PermissionError:
+    usuario = pwd.getpwuid(os.getuid()).pw_dir
+    print("El usuario "+usuario+", no tiene permiso para escribir o crear carpetas en la ruta destino: "+ tmp_path)
+    sys.exit(CRITICAL)
+
+
+date_string = get_content_date_from_file(path_file)
+fecha_almacenada = datetime.strptime(date_string, formato_fecha).date()
+
+week = args.semana
+# sumaFechaWeek = fecha_almacenada+timedelta(weeks=week)
+# totalWeek = today-sumaFechaWeek
+# print(totalWeek.days)
+# print((today - (fecha_almacenada+timedelta(weeks=week))).days)
+# exit()
+
+day = args.dia
+
+# sumaFechaDay = fecha_almacenada+timedelta(days=day)
+# totalDay = today-sumaFechaDay
+
+
+
+#if week and (str(today - fecha_almacenada+timedelta(weeks=week))) >= "1 days, 0:00:00":
+if week and ((today - (fecha_almacenada+timedelta(weeks=week))).days) > 0:
+    # Ejecutar respaldo
+    # print("estoy en week")
+    # exit()
+    conectar()
+    descargaRecursiva(ruta)
+    mostrarLog()
+    comprimirYBorrar(destino)
+    #Desconectamos con el servidor de forma protocolaria
+    ftp.quit()
+    init(path_file, today, formato_fecha)
+    print('OK - Conexion cerrada y archivos respaldados correctamente, ruta: '+ COPIAZIP+'con fecha: '+str(time.strftime("%Y%m%d-%H%M%S")))
+    # Actualizar fecha en el archivo con la fecha actual
+
+
+if day and ((today - (fecha_almacenada+timedelta(days=day))).days) > 0:
+    # Ejecutar respaldo
+    # print("estoy en day")
+    # exit()
+    conectar()
+    descargaRecursiva(ruta)
+    mostrarLog()
+    comprimirYBorrar(destino)
+    #Desconectamos con el servidor de forma protocolaria
+    ftp.quit()
+    init(path_file, today, formato_fecha)
+    print('OK - Conexion cerrada y archivos respaldados correctamente, ruta: '+ COPIAZIP+'con fecha: '+str(time.strftime("%Y%m%d-%H%M%S")))
+    # Actualizar fecha en el archivo con la fecha actual
+
+print(f"OK - Aun no corresponde realizar respaldo, el ultimo respaldo fue realizado con fecha: {fecha_almacenada}")
+
+
 
 
 
