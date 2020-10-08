@@ -8,21 +8,7 @@ import sys
 import argparse
 from datetime import datetime, date, time, timedelta
 
-#python3 check_respaldo_ftp.py -s 192.168.0.7 -u cristian -pass cristian -r /etc/apache2/ -t /home/cristian/backup/temporal -c /home/cristian/backup/
-
-"""
-Hola a Todos,
-Por favor si me pueden orientar como hacer lo siguiente.
-Resulta que necesito que se ejecute un script cada cierto tiempo que lo defina el usuario, sea cada 7 dias, 1 mes, etc. Algunos me diran que use un cronjob, pero no me sirve en este caso. Necesito que el usuario lo ingrese por ejemplo por argparse, el ciclo de los dias que se ejecutara el script
-El punto que si elije 7 dias, puedo sumar a la variable por ejemplo dia_ciclo = fecha+timedelta(days=7) o semana_siguiente = fecha_inicio+timedelta(weeks=1), pero como lo hago para la semana siguiente, ya que el script sera llamado de forma constante (cada 30min por ejemplo).
-Pense algo asi, pero solo me servira para un ciclo. Nose como hacerlo para que sea constante.
-fecha_inicio = date(2020, 10, 2 )
-semana_siguiente = fecha_inicio+timedelta(weeks=1)
-while fecha_inicio < semana_siguiente:
-    fecha_inicio = fecha_inicio+timedelta(days=1)
-
-"""
-
+#python3 check_respaldo_ftp.py -s 192.168.0.7 -u cristian -pass cristian -r /etc/apache2/ -t /home/cristian/backup/temporal -c /home/cristian/backup/ -d 1
 
 parser = argparse.ArgumentParser(description="Check Respaldo FTP Nagios")
 
@@ -96,7 +82,7 @@ parser.add_argument(
     nargs="?",
     default=21,
     type=int,
-    help="ruta copia de descarga en archivo zip"
+    help="puerto usado para la conexion"
 
 )
 
@@ -130,6 +116,16 @@ CLAVE = f'{args.password}'
 #ruta = "/"
 ruta = f"{args.ruta}"
 destino = f"{args.temporal}" 
+
+# HOST = '192.168.0.7'
+# PUERTO = 21
+# USUARIO = 'cristian'
+# CLAVE = 'cristian'
+# ruta = "/etc/apache2/"
+# destino = "/home/cristian/backup/temporal" 
+
+
+
 ftp = FTP()
 
 """ print(f"la ip del server es: {HOST}")
@@ -145,7 +141,10 @@ listaErrores = []
 numErrores = 0
 
 #Ruta donde se guardará un .zip de todo lo descargado
-COPIAZIP='/home/cristian/backup/'
+#COPIAZIP='/home/cristian/backup/'
+COPIAZIP=f'{args.copia}'
+# print(COPIAZIP)
+# exit()
 
 if destino == COPIAZIP:
     print("LA ruta de Destino:"+destino+" No puede ser igual a: "+COPIAZIP)
@@ -296,7 +295,9 @@ def mostrarLog():
 def comprimirYBorrar(ruta):
     #print('Comprimiendo '+ruta)
     assert os.path.isdir(ruta)
-    with closing(ZipFile(COPIAZIP+'Copia'+str(time.strftime("%Y%m%d-%H%M%S"))+'.zip', "w", ZIP_DEFLATED)) as z:
+    # print(str(fecha_hora.strftime("%Y%m%d-%H%M%S")))
+    # exit()
+    with closing(ZipFile(COPIAZIP+'Copia'+str(fecha_hora.strftime("%Y%m%d-%H%M%S"))+'.zip', "w", ZIP_DEFLATED)) as z:
         for root, dirs, files in os.walk(ruta):
             for fn in files:
                 absfn = os.path.join(root, fn)
@@ -328,6 +329,7 @@ path_file = f"{tmp_path}/fecha.txt" # nombre del archivo con su direcotrio base
 
 # Fecha actual
 today = date.today()
+fecha_hora = datetime.now()
 formato_fecha = "%d/%m/%Y %H:%M:%S"
 
 try:
@@ -355,7 +357,8 @@ day = args.dia
 
 # sumaFechaDay = fecha_almacenada+timedelta(days=day)
 # totalDay = today-sumaFechaDay
-
+# print(totalDay.days)
+# exit()
 
 
 #if week and (str(today - fecha_almacenada+timedelta(weeks=week))) >= "1 days, 0:00:00":
@@ -370,8 +373,9 @@ if week and ((today - (fecha_almacenada+timedelta(weeks=week))).days) > 0:
     #Desconectamos con el servidor de forma protocolaria
     ftp.quit()
     init(path_file, today, formato_fecha)
-    print('OK - Conexion cerrada y archivos respaldados correctamente, ruta: '+ COPIAZIP+'con fecha: '+str(time.strftime("%Y%m%d-%H%M%S")))
+    print('OK - Conexion cerrada y archivos respaldados correctamente, ruta: '+ COPIAZIP+'con fecha: '+str(fecha_hora.strftime("%Y%m%d-%H%M%S")))
     # Actualizar fecha en el archivo con la fecha actual
+    sys.exit()
 
 
 if day and ((today - (fecha_almacenada+timedelta(days=day))).days) > 0:
@@ -385,8 +389,9 @@ if day and ((today - (fecha_almacenada+timedelta(days=day))).days) > 0:
     #Desconectamos con el servidor de forma protocolaria
     ftp.quit()
     init(path_file, today, formato_fecha)
-    print('OK - Conexion cerrada y archivos respaldados correctamente, ruta: '+ COPIAZIP+'con fecha: '+str(time.strftime("%Y%m%d-%H%M%S")))
+    print('OK - Conexion cerrada y archivos respaldados correctamente, ruta: '+ COPIAZIP+'con fecha: '+str(fecha_hora.strftime("%Y%m%d-%H%M%S")))
     # Actualizar fecha en el archivo con la fecha actual
+    sys.exit()
 
 print(f"OK - Aun no corresponde realizar respaldo, el ultimo respaldo fue realizado con fecha: {fecha_almacenada}")
 
